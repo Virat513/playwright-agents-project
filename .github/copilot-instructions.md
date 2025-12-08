@@ -1,7 +1,7 @@
 # Copilot Instructions for AI Agents
 
 ## Project Overview
-This project automates the generation, validation, and healing of Playwright end-to-end tests using AI agents and the Playwright MCP (Model Context Protocol) server. It is designed for rapid, robust test authoring and maintenance, targeting web applications such as https://www.saucedemo.com/.
+This project automates the generation, validation, and healing of Playwright end-to-end tests using AI agents and the Playwright MCP (Model Context Protocol) server. It is designed for rapid, robust test authoring and maintenance, targeting web applications.
 
 ## Key Components
 - **`generate-tests.js`**: Main entry point. Reads a user story, generates acceptance criteria and Playwright test code using OpenAI, then validates and auto-corrects the code with a Playwright agent. Output is saved to `generated/`.
@@ -21,6 +21,9 @@ This project automates the generation, validation, and healing of Playwright end
 - Deterministic, robust, and maintainable test code is required—agents self-correct and validate output.
 - Test plans and scenarios are documented in markdown under `specs/`.
 - Agent behaviors and tool usage are defined in `.github/agents/*.agent.md`—review these for agent-specific rules and workflows.
+- If there is any automation test script that require login use
+  - Username: `standard_user`
+  - Password: `secret_sauce`
 
 ## Integration Points
 - **OpenAI**: Used for LLM-based test plan and code generation.
