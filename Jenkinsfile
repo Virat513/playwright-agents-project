@@ -112,36 +112,50 @@ pipeline {
             }
         }
 
-        stage('Run Playwright Tests') {
-            steps {
-                script {
-                    echo "🧪 Building Playwright test command and running tests"
+stage('Run Playwright Tests') {
+    steps {
+        script {
+            echo "🧪 Running Playwright tests"
 
-                    def testCommand = buildWindowsTestCommand(params)
-                    echo "Executing: ${testCommand}"
+            // Build test command dynamically
+            def headedFlag = params.HEADED?.toBoolean() ? "--headed" : ""
+            def suiteFlag = params.TEST_SUITE && params.TEST_SUITE != "all" ? "--grep ${params.TEST_SUITE}" : ""
+            def browserFlag = params.BROWSER ? "--browser=${params.BROWSER}" : "--browser=chromium"
 
-                    // Run tests - capture exit code
-                    def exitCode = bat(script: testCommand, returnStatus: true)
-                    env.TEST_EXIT_CODE = "${exitCode}"
-                    echo "Playwright exit code: ${exitCode}"
-                }
-            }
-            post {
-                always {
-                    script {
-                        // Archive Allure results and generated test output
-                        archiveArtifacts artifacts: "allure-results\\**\\*, ${TEST_RESULTS_DIR}\\**\\*, ${PLAYWRIGHT_REPORT_DIR}\\**\\*", allowEmptyArchive: true, fingerprint: true
+            def testCommand = "npx playwright test ${suiteFlag} ${headedFlag} ${browserFlag}"
 
-                        // Convert Playwright JUnit (if produced) and publish
-                        if (fileExists("${TEST_RESULTS_DIR}\\junit-results.xml")) {
-                            junit "${TEST_RESULTS_DIR}\\junit-results.xml"
-                        } else {
-                            echo "No JUnit results found at ${TEST_RESULTS_DIR}\\junit-results.xml"
-                        }
-                    }
+            echo "Executing test command: ${testCommand}"
+
+            // Run tests & capture exit code
+            def exitCode = bat(script: testCommand, returnStatus: true)
+            env.TEST_EXIT_CODE = "${exitCode}"
+            echo "Playwright exit code: ${exitCode}"
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo "📦 Archiving Allure + Test results"
+
+                archiveArtifacts artifacts: """
+                    allure-results/**,
+                    ${TEST_RESULTS_DIR}/**,
+                    ${PLAYWRIGHT_REPORT_DIR}/**
+                """, allowEmptyArchive: true, fingerprint: true
+
+                // Publish JUnit report if Playwright produced it
+                def junitPath = "${TEST_RESULTS_DIR}\\junit-results.xml"
+                if (fileExists(junitPath)) {
+                    echo "📄 Publishing JUnit results"
+                    junit junitPath
+                } else {
+                    echo "⚠️ No JUnit results found at: ${junitPath}"
                 }
             }
         }
+    }
+}
 
         stage('Generate Allure Report') {
             when {
