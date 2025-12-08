@@ -1,8 +1,3 @@
-// Jenkinsfile (Windows-ready) - Playwright + Allure
-// IMPORTANT:
-// - Configure a NodeJS tool in Jenkins Global Tool Configuration named "Node18" (or change below).
-// - Install Allure Jenkins plugin and configure Allure CLI in Jenkins if you want the allure() step to work.
-
 pipeline {
     agent any
 
@@ -15,11 +10,6 @@ pipeline {
         PLAYWRIGHT_CONFIG_PROJECT_NAMES = "chromium,firefox,webkit" // comma-separated project names
         TEST_RESULTS_DIR = "${WORKSPACE_WIN}\\test-results"
         PLAYWRIGHT_REPORT_DIR = "${WORKSPACE_WIN}\\playwright-report"
-    }
-
-    tools {
-        // This requires a NodeJS installation named Node18 in Jenkins global tools.
-        nodejs "${NODE_TOOL_NAME}"
     }
 
     parameters {
@@ -79,6 +69,9 @@ pipeline {
         }
 
         stage('Install Node Dependencies') {
+            tools {
+                nodejs "${NODE_TOOL_NAME}"  // This ensures NodeJS is set up
+            }
             steps {
                 script {
                     echo "📦 Verify Node & NPM and install dependencies"
@@ -179,14 +172,14 @@ pipeline {
             steps {
                 script {
                     if (fileExists("${PLAYWRIGHT_REPORT_DIR}\\index.html")) {
-                        publishHTML ([
-                            allowMissing: false,
-                            alwaysLinkToLastBuild: true,
-                            keepAll: true,
-                            reportDir: "${PLAYWRIGHT_REPORT_DIR}",
-                            reportFiles: 'index.html',
-                            reportName: 'Playwright HTML Report',
-                            reportTitles: 'Playwright Test Results'
+                        publishHTML ([ 
+                            allowMissing: false, 
+                            alwaysLinkToLastBuild: true, 
+                            keepAll: true, 
+                            reportDir: "${PLAYWRIGHT_REPORT_DIR}", 
+                            reportFiles: 'index.html', 
+                            reportName: 'Playwright HTML Report', 
+                            reportTitles: 'Playwright Test Results' 
                         ])
                     } else {
                         echo "Playwright HTML report not found at ${PLAYWRIGHT_REPORT_DIR}\\index.html"
@@ -255,59 +248,3 @@ pipeline {
     }
 }
 
-// -----------------------------------------------------------------------------
-// Helper function: constructs the Windows-compatible Playwright test command
-// -----------------------------------------------------------------------------
-def buildWindowsTestCommand(params) {
-    def cmd = []
-    cmd << 'cmd /c'  // ensure Windows command shell
-    def args = []
-
-    // base command
-    args << 'npx playwright test'
-
-    // reporter: list + allure-playwright
-    args << '--reporter=list,allure-playwright'
-
-    // browser/project selection
-    if (params.BROWSER && params.BROWSER != 'all') {
-        // rely on playwright.config.ts projects having same names
-        args << "--project=${params.BROWSER}"
-    }
-
-    // suite selection (path patterns)
-    switch(params.TEST_SUITE) {
-        case 'comprehensive':
-            args << 'generated\\saucedemo-addtocart-comprehensive.spec.ts'
-            break
-        case 'login':
-            args << 'generated\\*login*.spec.ts'
-            break
-        case 'cart':
-            args << 'generated\\*cart*.spec.ts'
-            break
-        case 'all':
-        default:
-            args << 'generated\\'
-            break
-    }
-
-    // headed mode
-    if (params.HEADED_MODE == 'true' || params.HEADED_MODE == true) {
-        args << '--headed'
-    }
-
-    // parallel workers
-    def workers = params.PARALLEL_WORKERS ?: '2'
-    args << "--workers=${workers}"
-
-    // additional robust options
-    args << '--output-dir=test-results'
-    args << '--max-failures=5'
-    args << '--timeout=45000' // 45s per test default - increase if needed
-    args << '--retries=1' // helpful for flaky tests
-
-    // join args into a single command string
-    def joined = args.join(' ')
-    return "${cmd.join(' ')} \"${joined}\""
-}
