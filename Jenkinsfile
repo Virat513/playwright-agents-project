@@ -25,7 +25,6 @@ pipeline {
                 echo Checking Node and NPM...
                 node --version
                 npm --version
-
                 echo Installing dependencies with npm ci...
                 npm ci
                 """
@@ -45,7 +44,6 @@ pipeline {
             steps {
                 bat """
                 echo Running Playwright tests on Chromium...
-
                 npx playwright test ^
                     --project=chromium ^
                     --reporter=list,allure-playwright
@@ -58,12 +56,10 @@ pipeline {
                 script {
                     echo "Publishing Allure report..."
                 }
-
                 allure includeProperties: false, jdk: '', results: [[path: "${ALLURE_RESULTS}"]]
             }
         }
     }
-
     post {
         always {
             echo "Archiving allure-results..."
