@@ -21,10 +21,8 @@ pipeline {
 
         stage('Install Node Dependencies') {
             steps {
-                script {
-                    echo "📦 Verifying Node & NPM"
-                }
                 bat """
+                echo Checking Node and NPM...
                 node --version
                 npm --version
 
@@ -37,7 +35,7 @@ pipeline {
         stage('Install Playwright Browsers') {
             steps {
                 bat """
-                echo Installing Chromium for Playwright...
+                echo Installing Chromium browser...
                 npx playwright install chromium
                 """
             }
@@ -47,10 +45,6 @@ pipeline {
             steps {
                 bat """
                 echo Running Playwright tests on Chromium...
-
-                REM IMPORTANT:
-                REM - No --alluredir (Playwright does not support it)
-                REM - Allure reporter will auto-generate allure-results/
 
                 npx playwright test ^
                     --project=chromium ^
@@ -62,18 +56,20 @@ pipeline {
         stage('Publish Allure Report') {
             steps {
                 script {
-                    echo "📊 Publishing Allure Report..."
+                    echo "Publishing Allure Report..."
                 }
-
-                allure includeProperties: false, jdk: '', results: [[path: "${ALLURE_RESULTS}"]]
+                allure includeProperties: false,
+                       jdk: '',
+                       results: [[path: "${ALLURE_RESULTS}"]]
             }
         }
     }
 
     post {
         always {
-            echo "📦 Archiving Allure results only..."
-            archiveArtifacts artifacts: "${ALLURE_RESULTS}/**", allowEmptyArchive: true
+            echo "Archiving allure-results..."
+            archiveArtifacts artifacts: "${ALLURE_RESULTS}/**",
+                              allowEmptyArchive: true
         }
     }
 }
