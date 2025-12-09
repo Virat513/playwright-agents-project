@@ -4,15 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test",
-    "test:headed": "playwright test --headed",
-    "test:chrome": "playwright test --project=chromium",
-    "test:allure": "playwright test --reporter=allure-playwright",
-    "allure:generate": "allure generate allure-results --clean -o allure-report",
-    "allure:serve": "allure serve allure-results",
-    "allure:report": "npm run allure:generate && allure open allure-report",
-    "test:comprehensive": "playwright test generated/saucedemo-addtocart-comprehensive.spec.ts",
-    "test:comprehensive:allure": "playwright test generated/saucedemo-addtocart-comprehensive.spec.ts --reporter=allure-playwright && npm run allure:serve"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +12,6 @@
   "type": "module",
   "dependencies": {
     "dotenv": "^17.2.3",
-    "metrics": "^0.1.21",
     "openai": "^6.9.1"
   },
   "devDependencies": {
