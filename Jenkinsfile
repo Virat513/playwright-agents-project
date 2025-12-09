@@ -3,21 +3,22 @@ pipeline {
 
     tools {
         allure 'allure'
-        nodejs 'Node18'    // make sure Node18 is configured in Global Tool Configuration
+        nodejs 'Node18'
     }
 
     environment {
         ALLURE_RESULTS = "allure-results"
-        PW_REPORT = "playwright-report"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 git branch: 'master',
                     url: 'https://github.com/Virat513/playwright-agents-project.git'
             }
         }
+
         stage('Install Node Dependencies') {
             steps {
                 script {
@@ -46,13 +47,24 @@ pipeline {
             steps {
                 bat """
                 echo Running Playwright tests on Chromium...
-                npx playwright test --project=chromium --reporter=line --output=${PW_REPORT} --alluredir=${ALLURE_RESULTS}
+
+                REM IMPORTANT:
+                REM - No --alluredir (Playwright does not support it)
+                REM - Allure reporter will auto-generate allure-results/
+
+                npx playwright test ^
+                    --project=chromium ^
+                    --reporter=list,allure-playwright
                 """
             }
         }
 
         stage('Publish Allure Report') {
             steps {
+                script {
+                    echo "📊 Publishing Allure Report..."
+                }
+
                 allure includeProperties: false, jdk: '', results: [[path: "${ALLURE_RESULTS}"]]
             }
         }
@@ -60,10 +72,8 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: """
-                ${ALLURE_RESULTS}/**,
-                ${PW_REPORT}/**
-            """, allowEmptyArchive: true
+            echo "📦 Archiving Allure results only..."
+            archiveArtifacts artifacts: "${ALLURE_RESULTS}/**", allowEmptyArchive: true
         }
     }
 }
