@@ -32,6 +32,7 @@ pipeline {
             }
         }
 
+
         stage('Install Playwright Browsers') {
             steps {
                 bat """
