@@ -26,12 +26,11 @@ pipeline {
                 node --version
                 npm --version
 
-                echo Installing dependencies...
+                echo Installing dependencies with npm ci...
                 npm ci
                 """
             }
         }
-
 
         stage('Install Playwright Browsers') {
             steps {
@@ -57,11 +56,10 @@ pipeline {
         stage('Publish Allure Report') {
             steps {
                 script {
-                    echo "Publishing Allure Report..."
+                    echo "Publishing Allure report..."
                 }
-                allure includeProperties: false,
-                       jdk: '',
-                       results: [[path: "${ALLURE_RESULTS}"]]
+
+                allure includeProperties: false, jdk: '', results: [[path: "${ALLURE_RESULTS}"]]
             }
         }
     }
@@ -69,8 +67,7 @@ pipeline {
     post {
         always {
             echo "Archiving allure-results..."
-            archiveArtifacts artifacts: "${ALLURE_RESULTS}/**",
-                              allowEmptyArchive: true
+            archiveArtifacts artifacts: "${ALLURE_RESULTS}/**", allowEmptyArchive: true
         }
     }
 }
