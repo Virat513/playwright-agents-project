@@ -48,4 +48,15 @@ npx playwright test --project=chromium --reporter=list,allure-playwright
 
         stage('Publish Allure Report') {
             steps {
-                allure includeProperties:
+                allure includeProperties: false, jdk: '', results: [[path: "${ALLURE_RESULTS}"]]
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Archiving allure-results..."
+            archiveArtifacts artifacts: "${ALLURE_RESULTS}/**", allowEmptyArchive: true
+        }
+    }
+}
