@@ -22,48 +22,30 @@ pipeline {
         stage('Install Node Dependencies') {
             steps {
                 bat """
-                echo Checking Node and NPM...
-                node --version
-                npm --version
-                echo Installing dependencies with npm ci...
-                npm ci
-                """
+echo Installing dependencies...
+npm ci
+"""
             }
         }
 
         stage('Install Playwright Browsers') {
             steps {
                 bat """
-                echo Installing Chromium browser...
-                npx playwright install chromium
-                """
+echo Installing Chromium browser...
+npx playwright install chromium
+"""
             }
         }
 
         stage('Run Playwright Tests') {
             steps {
                 bat """
-                echo Running Playwright tests on Chromium...
-                npx playwright test ^
-                    --project=chromium ^
-                    --reporter=list,allure-playwright
-                """
+echo Running Playwright tests on Chromium...
+npx playwright test --project=chromium --reporter=list,allure-playwright
+"""
             }
         }
 
         stage('Publish Allure Report') {
             steps {
-                script {
-                    echo "Publishing Allure report..."
-                }
-                allure includeProperties: false, jdk: '', results: [[path: "${ALLURE_RESULTS}"]]
-            }
-        }
-    }
-    post {
-        always {
-            echo "Archiving allure-results..."
-            archiveArtifacts artifacts: "${ALLURE_RESULTS}/**", allowEmptyArchive: true
-        }
-    }
-}
+                allure includeProperties:
