@@ -12,15 +12,12 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 git branch: 'master',
-                    url: 'https://github.com/Virat513/playwright-agents-project.git',
-                    credentialsId: '***REMOVED***'
+                    url: 'https://github.com/Virat513/playwright-agents-project.git'
             }
         }
-
         stage('Install Node Dependencies') {
             steps {
                 script {
