@@ -1,94 +1,154 @@
-import { createAgent } from "@playwright/test";
+/**
+ * Playwright Test Generator – SauceDemo
+ *
+ * Responsibilities:
+ * 1. Knows the application under test (SauceDemo)
+ * 2. Knows the base URL
+ * 3. Generates JavaScript + Playwright test cases
+ * 4. Reads manual test cases from /test-plans
+ * 5. Writes automation scripts to /generated
+ * 6. Ensures ONE test file per functionality
+ * 7. DOES NOT run tests - only generates code
+ */
+
+import fs from "fs";
+import path from "path";
 import OpenAI from "openai";
-import * as fs from "fs";
-import dotenv from "dotenv";
-dotenv.config();
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
- * AGENT PROMPT
- * This agent reads a user story, generates acceptance criteria,
- * derives test scenarios, and outputs Playwright test code (TypeScript).
+ * Agent Mode Enforcement
+ * This script should ONLY generate test code, never execute tests
  */
-const SYSTEM_PROMPT = `
-You are an expert QA Automation Engineer specializing in Playwright.
-Given a user story, you MUST output:
+const AGENT_MODE = process.env.PLAYWRIGHT_AGENT_MODE || 'generator';
+if (AGENT_MODE === 'healer') {
+  console.warn('⚠️  Generator script running in healer mode. Consider using test execution tools instead.');
+}
 
-1. Acceptance Criteria
-2. Test Scenarios (step-by-step instructions)
-3. Playwright Test Code (TypeScript, for Playwright Test Runner)
+console.log(`🔸 Generator Agent Mode: Creating test code only (no execution)`);
 
-Rules:
+/**
+ * ===============================
+ * APPLICATION METADATA (GLOBAL)
+ * ===============================
+ */
+const APP_CONTEXT = {
+  name: "SauceDemo",
+  baseUrl: "https://www.saucedemo.com/",
+  framework: "Playwright",
+  language: "JavaScript"
+};
+
+/**
+ * ===============================
+ * DIRECTORY STRUCTURE
+ * ===============================
+ */
+const TEST_PLANS_DIR = path.resolve("test-plans");
+const GENERATED_DIR = path.resolve("generated");
+
+/**
+ * Ensure output directory exists
+ */
+if (!fs.existsSync(GENERATED_DIR)) {
+  fs.mkdirSync(GENERATED_DIR, { recursive: true });
+}
+
+/**
+ * ===============================
+ * LLM CLIENT
+ * ===============================
+ */
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+/**
+ * ===============================
+ * SYSTEM PROMPT (STRICT RULES)
+ * ===============================
+ */
+function buildSystemPrompt() {
+  return `
+You are a Senior QA Automation Engineer.
+
+Application under test:
+- Name: ${APP_CONTEXT.name}
+- URL: ${APP_CONTEXT.baseUrl}
+
+Rules you MUST follow:
+1. Generate ONLY JavaScript Playwright test code
+2. Use @playwright/test
+3. Use "${APP_CONTEXT.baseUrl}" as the base URL
+4. One functionality = ONE test file
+5. Use clear test.describe blocks per functionality
+6. Use reliable selectors (data-test where possible)
+7. No explanations, no markdown
+8. Output ONLY valid runnable test code
 `;
+}
 
 /**
- * Generate test plan + code from user story
+ * ===============================
+ * CORE GENERATION FUNCTION
+ * ===============================
  */
-async function generateTestPlan(userStory, agent) {
+async function generateTestFromPlan(planFile) {
+  const planPath = path.join(TEST_PLANS_DIR, planFile);
+  const functionalityName = path.basename(planFile, path.extname(planFile));
+
+  const manualTestContent = fs.readFileSync(planPath, "utf-8");
+
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userStory }
-    ]
+      { role: "system", content: buildSystemPrompt() },
+      {
+        role: "user",
+        content: `
+Manual test cases for functionality: "${functionalityName}"
+
+${manualTestContent}
+`
+      }
+    ],
+    temperature: 0.2
   });
 
-  const result = response.choices[0].message.content;
-  return result;
+  const generatedCode = response.choices[0].message.content.trim();
+
+  const outputFilePath = path.join(
+    GENERATED_DIR,
+    `${functionalityName}.spec.js`
+  );
+
+  fs.writeFileSync(outputFilePath, generatedCode, "utf-8");
+
+  console.log(`✅ Generated test: ${outputFilePath}`);
 }
 
 /**
- * Use Playwright Agent to validate & auto-fix generated tests
+ * ===============================
+ * ENTRY POINT
+ * ===============================
  */
-async function runAndSelfCorrectTest(testCode, agent) {
-  console.log("\n🚀 Running generated test through Playwright Agent...");
+async function run() {
+  const planFiles = fs
+    .readdirSync(TEST_PLANS_DIR)
+    .filter(file => file.endsWith(".md"));
 
-  const result = await agent.fixTest({
-    code: testCode,
-    language: "ts",
-  });
-
-  console.log("\n🤖 Agent Revised Test Code:\n");
-  console.log(result.correctedCode);
-
-  return result.correctedCode;
-}
-
-/**
- * MAIN FUNCTION
- */
-async function main() {
-  const userStory = `
-As a user, I want to log into SauceDemo using valid credentials
-so that I can access the products page.
-`;
-
-  console.log("📝 User Story:\n", userStory);
-
-  // Initialize Playwright Test Agent
-  const agent = await createAgent();
-
-  // Step 1: Generate Test Plan + Code
-  const plan = await generateTestPlan(userStory, agent);
-  console.log("\n📋 Generated Test Plan:\n", plan);
-
-  // Extract code block from LLM output
-  const codeMatch = plan.match(/```ts([\s\S]*?)```/);
-  if (!codeMatch) {
-    console.error("❌ No TypeScript code block found.");
-    process.exit(1);
+  if (planFiles.length === 0) {
+    console.warn("⚠️ No manual test plans found in test-plans/");
+    return;
   }
-  let testCode = codeMatch[1].trim();
 
-  // Step 2: Agent Self-Correct & Validate
-  const corrected = await runAndSelfCorrectTest(testCode, agent);
+  for (const planFile of planFiles) {
+    await generateTestFromPlan(planFile);
+  }
 
-  // Step 3: Save to file
-  fs.writeFileSync("./generated/saucedemo-login.spec.ts", corrected);
-  console.log("\n💾 Saved to: generated/saucedemo-login.spec.ts");
-
-  console.log("\n🎉 Done!");
+  console.log("🎉 All Playwright tests generated successfully");
 }
 
-main();
+run().catch(err => {
+  console.error("❌ Test generation failed:", err);
+  process.exit(1);
+});

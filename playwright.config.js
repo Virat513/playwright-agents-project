@@ -1,24 +1,63 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
+ * Application Metadata
+ * (Single source of truth for agents & reports)
+ */
+const APPLICATION_NAME = 'SauceDemo';
+const BASE_URL = process.env.BASE_URL || 'https://www.saucedemo.com/';
+
+/**
+ * Agent Mode Detection
+ * PLAYWRIGHT_AGENT_MODE values: 'planner', 'generator', 'healer'
+ * Tests should ONLY run in 'healer' mode
+ */
+const AGENT_MODE = process.env.PLAYWRIGHT_AGENT_MODE || 'healer';
+const IS_HEALER_MODE = AGENT_MODE === 'healer';
+const IS_GENERATOR_MODE = AGENT_MODE === 'generator';
+
+// Exit early if in generator mode to prevent test execution
+if (IS_GENERATOR_MODE) {
+  console.log('🔸 Generator Agent Mode: Test execution is disabled. Use healer mode to run tests.');
+  process.exit(0);
+}
+
+/**
+ * Default Report Configuration
+ * Using standard Playwright reporting locations
+ */
+
+/**
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './generated',
-  /* Run tests in files in parallel */
+  testDir: IS_HEALER_MODE ? './generated' : null, // Only set testDir in healer mode
+
+  /* Run tests in parallel */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+
+  /* Fail CI build if test.only is left */
   forbidOnly: !!process.env.CI,
+
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
+
+  /* Opt out of parallel tests on CI */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+
+  /* Reporters */
   reporter: [
-    ['html'],
+    // HTML Report (default location: playwright-report/)
+    ['html', {
+      open: process.env.CI ? 'never' : 'on-failure',
+      host: 'localhost',
+      port: 9323,
+    }],
+    // Console output for real-time feedback
+    ['line'],
+    // Allure Report (default location: allure-results/)
     ['allure-playwright', {
       detail: true,
-      outputFolder: 'allure-results',
       suiteTitle: false,
       categories: [
         {
@@ -26,7 +65,7 @@ export default defineConfig({
           messageRegex: '.*deprecated.*',
         },
         {
-          name: 'Regression',
+          name: 'Regression', 
           messageRegex: '.*regression.*',
         },
         {
@@ -35,68 +74,46 @@ export default defineConfig({
         },
       ],
       environmentInfo: {
+        application: APPLICATION_NAME,
+        base_url: BASE_URL,
         framework: 'playwright',
         node_version: process.version,
+        browser: 'microsoft-edge',
+        manual_test_plans: './manual-test-plans',
+        timestamp: new Date().toISOString(),
       },
     }],
   ],
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
-  use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'https://www.saucedemo.com',
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
-    
-    /* Take screenshot on failure */
+  /* Output directory for test artifacts */
+  outputDir: 'test-results',
+
+  /* Shared settings for all tests */
+  use: {
+    /* Run in headed mode */
+    headless: false,
+
+    /* Base URL for page.goto('/') */
+    baseURL: BASE_URL,
+
+    /* Artifacts on all tests for better reporting */
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    
-    /* Record video on failure */
     video: 'retain-on-failure',
+    
+    /* Collect additional context for reports */
+    actionTimeout: 30000,
+    navigationTimeout: 30000,
   },
 
-  /* Configure projects for major browsers */
+  /* ✅ Single browser execution: Microsoft Edge */
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-
-    /* Test against branded browsers. */
-    {
       name: 'Microsoft Edge',
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    },
-    {
-      name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+      use: {
+        ...devices['Desktop Edge'],
+        channel: 'msedge',
+      },
     },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://127.0.0.1:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });

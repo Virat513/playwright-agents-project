@@ -4,7 +4,26 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run mode:check:healer && playwright test --project=\"Microsoft Edge\"",
+    "test:login": "npm run mode:check:healer && playwright test generated/saucedemo-login.spec.js --project=\"Microsoft Edge\"",
+
+    "report:list": "node report-manager.js list",
+    "report:open": "node report-manager.js open",
+    "report:latest": "node report-manager.js open",
+    "report:allure": "node report-manager.js allure",
+    "report:clean": "node report-manager.js clean",
+
+    "test:headed": "npm run mode:check:healer && playwright test --headed --project=\"Microsoft Edge\"",
+    "test:debug": "npm run mode:check:healer && playwright test --debug --project=\"Microsoft Edge\"",
+    "generate:tests": "PLAYWRIGHT_AGENT_MODE=generator node generate-tests.js",
+    "heal:tests": "PLAYWRIGHT_AGENT_MODE=healer npm run test",
+    "mode:check:healer": "node -e \"if(process.env.PLAYWRIGHT_AGENT_MODE==='generator'){console.error('❌ Tests cannot run in generator mode. Use healer mode: npm run heal:tests');process.exit(1);}\"",
+    "mode:set:planner": "set PLAYWRIGHT_AGENT_MODE=planner",
+    "mode:set:generator": "set PLAYWRIGHT_AGENT_MODE=generator", 
+    "mode:set:healer": "set PLAYWRIGHT_AGENT_MODE=healer",
+    "mode:status": "node -e \"const mode=process.env.PLAYWRIGHT_AGENT_MODE||'healer';console.log('Current Agent Mode:',mode);\"",
+    "validate:modes": "node validate-modes.js",
+    "postinstall": "npm run report:init"
   },
   "keywords": [],
   "author": "",
